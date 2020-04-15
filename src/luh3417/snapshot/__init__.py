@@ -41,14 +41,14 @@ def _build_args(location: Location, args: Sequence[Text]) -> Sequence[Text]:
     if isinstance(location, LocalLocation):
         return args
     elif isinstance(location, SshLocation):
-        return SshManager.instance(location.user, location.host).get_args(args)
+        return SshManager.instance(location.user, location.host, location.port).get_args(args)
 
 
 def copy_files(remote: Location, local: Location):
     """
     Copies files from the remote location to the local locations. Files are
     serialized and pipelined through tar, maybe locally, maybe through SSH
-    depending on the locations. 
+    depending on the locations.
     """
 
     remote_args = _build_args(remote, ["tar", "-C", remote.path, "-c", "."])

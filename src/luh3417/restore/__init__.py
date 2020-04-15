@@ -88,23 +88,28 @@ def make_replace_map(replace_in_dump: List[Dict[Text, Text]]) -> ReplaceMap:
     ]
 
 
-def ensure_db_exists(wp_config, mysql_root, source: Location):
+def ensure_db_exists(wp_config, mysql_root, source: Location, db_host: Text):
     """
     If a database is pre-existing, delete it. Then create a new one and create
     the appropriate user.
     """
 
-    db = create_root_from_source(wp_config, mysql_root, source)
+    db = create_root_from_source(wp_config, mysql_root, source, db_host)
 
     name = escape(wp_config["db_name"], "`")
     user = escape(wp_config["db_user"], "`")
     host = escape(wp_config["db_host"], "`")
+
+    used_db_host = host
+    if db_host:
+        used_db_host = db_host
+
     password = escape(wp_config["db_password"], "'")
 
     db.run_query(f"drop database if exists {name};")
     db.run_query(f"create database {name};")
     db.run_query(
-        f"grant all privileges on {name}.* to {user}@{host} identified by {password};"
+        f"grant all privileges on {name}.* to {user}@{used_db_host} identified by {password};"
     )
 
 

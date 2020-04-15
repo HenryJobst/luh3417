@@ -18,7 +18,7 @@ Thanks to this, putting your code to production is as simple as:
 
 .. code:: bash
 
-    python -m luh3417.transfer -g my_project.py local production 
+    python -m luh3417.transfer -g my_project.py local production
 
 While the ``snapshot`` and ``restore`` operations can be used
 individually, it is not recommended to use them as the main tools.
@@ -47,7 +47,7 @@ If you prefer, there is also equivalent commands installed in the
 
 All the locations can be in two formats:
 
--  ``SSH`` — ``user@server:/location/on/server``
+-  ``SSH`` — ``user@server:[port]/location/on/server``, if no port number given, standard ssh port 22 is used
 -  ``Local`` — ``/location/on/current/machine``
 
 This allows you to transfer data between remote servers and local
@@ -72,13 +72,13 @@ Usage syntax:
 
 ::
 
-    python -m luh3417.snapshot [-h] [-n SNAPSHOT_BASE_NAME] [-t FILE_NAME_TEMPLATE] source backup_dir
+    python -m luh3417.snapshot [-h] [-n SNAPSHOT_BASE_NAME] [-t FILE_NAME_TEMPLATE] [-c COMPRESSION_MODE] source backup_dir
 
 Example:
 
 ::
 
-    python -m luh3417.snapshot root@prod-server.com:/var/www/html root@backup-server.com:/var/backups/wp
+    python -m luh3417.snapshot root@prod-server.com:222/var/www/html root@backup-server.com:/var/backups/wp
 
 Additional options:
 
@@ -92,6 +92,7 @@ Additional options:
    name (see ``--snapshot-base-name``) and the ISO 8601 UTC date.
    Independently of the name, the file will be placed in the
    ``backup_dir``.
+-  ``-c``/``--compression-mode`` — Compression mode for tar command. Available modes are gzip (default), bzip2, xc, lzip.
 
 ``restore``
 ~~~~~~~~~~~
@@ -399,7 +400,7 @@ Here is an example entry:
 Let's break this down
 
 ``providers``
-             
+
 
 That's a list of the providers, associated to a domain name. The
 different keys are used like this:
@@ -412,7 +413,7 @@ different keys are used like this:
    provider
 
 ``entries``
-           
+
 
 Entries are either a single CNAME either a set of A/AAAA records for a
 same domain name. LUH3417 will make sure that all records for this

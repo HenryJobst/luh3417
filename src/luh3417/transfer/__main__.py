@@ -114,14 +114,14 @@ def main(args: Optional[Sequence[str]] = None):
 
     gen = args.settings_generator
 
-    origin_source = parse_location(gen.get_source(args.origin))
+    origin_source = parse_location(gen.get_source(args.origin), args.compression_mode)
     origin_backup_dir = gen.get_backup_dir(args.origin)
 
     with doing(f"Backing up {args.origin} to {origin_backup_dir}"):
         origin_archive = snapshot([f"{origin_source}", origin_backup_dir])
 
     target_backup_dir = gen.get_backup_dir(args.target)
-    target_source = parse_location(gen.get_source(args.target))
+    target_source = parse_location(gen.get_source(args.target), args.compression_mode)
 
     with doing(f"Checking if {args.target} ({target_source}) already exists"):
         target_exists = target_source.exists()

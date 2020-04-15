@@ -9,15 +9,15 @@ main features:
   location
 - **Transfer** &mdash; Transfer one instance over another using automated
   backup, validation and configuration rules
-  
+
 Everything can happen seamlessly in *local* or *through SSH*, allowing you to
 work easily on remote servers from your local machine and to transfer instances
 from one server to another.
-  
+
 Thanks to this, putting your code to production is as simple as:
 
 ```bash
-python -m luh3417.transfer -g my_project.py local production 
+python -m luh3417.transfer -g my_project.py local production
 ```
 
 While the `snapshot` and `restore` operations can be used individually, it is
@@ -35,7 +35,7 @@ pip install luh3417
 ## Usage
 
 LUH3417 is made to use with Python's `-m` option. This way, if you want to
-invoke the `snapshot` feature, the base command will be 
+invoke the `snapshot` feature, the base command will be
 `python -m luh3417.snapshot`.
 
 If you prefer, there is also equivalent commands installed in the `bin`
@@ -43,7 +43,7 @@ directory, namely `luh3417_snapshot`, `luh3417_restore` and `luh3417_transfer`.
 
 All the locations can be in two formats:
 
-- `SSH` &mdash; `user@server:/location/on/server`
+- `SSH` &mdash; `user@server:[port]/location/on/server`, if no port number given, standard ssh port 22 is used
 - `Local` &mdash; `/location/on/current/machine`
 
 This allows you to transfer data between remote servers and local machine quite
@@ -71,7 +71,7 @@ python -m luh3417.snapshot [-h] [-n SNAPSHOT_BASE_NAME] [-t FILE_NAME_TEMPLATE] 
 Example:
 
 ```
-python -m luh3417.snapshot root@prod-server.com:/var/www/html root@backup-server.com:/var/backups/wp
+python -m luh3417.snapshot root@prod-server.com:222/var/www/html root@backup-server.com:/var/backups/wp
 ```
 
 Additional options:
@@ -84,7 +84,8 @@ Additional options:
   put whatever you want. `{base}` and `{time}` will be replaced respectively
   by the base name (see `--snapshot-base-name`) and the ISO 8601 UTC date.
   Independently of the name, the file will be placed in the `backup_dir`.
-  
+-  `-c`/`--compression-mode` — Compression mode for tar command. Available modes are gzip (default), bzip2, xc, lzip.
+
 ### `restore`
 
 Restores a snapshot either in-place to its original location using the embedded
@@ -109,7 +110,7 @@ Options:
 - `-a`/`--allow-in-place` &mdash; Allows restoring the backup onto its original
   location. This flag is required because otherwise it would be way too easy
   to override
-  
+
 #### Restore in-place
 
 If you want to restore a backup to its original location, you just need to
@@ -119,7 +120,7 @@ know the file's location and pass the `-a` flag.
 python -m luh3417.restore -a root@backup-server.com:/path/to/snapshot.tar.gz
 ```
 
-> **NOTE** &mdash; If the snapshot was made locally, it will always be restored 
+> **NOTE** &mdash; If the snapshot was made locally, it will always be restored
 > locally because there is no way for LUH3417 to know the originating server so
 > it assumes that the snapshot file was not transferred to another machine.
 
@@ -262,7 +263,7 @@ correct even if quoted in a MySQL string.
 
 In order to create the database and set the user password, the script needs
 a root access to MySQL. Today, the only supported method is `socket`, because
-it is password-less. However it only works when the server is local and 
+it is password-less. However it only works when the server is local and
 properly configured (it's the default behavior in Debian-based distros).
 
 ```json
@@ -390,10 +391,10 @@ match your specification and **will delete other records for that sub-domain**.
 Suppose the following situation:
 
 - `foo.my.org` resolves to `A 1.2.3.4`
-- But you want it to be a CNAME of `bar.my.org` 
+- But you want it to be a CNAME of `bar.my.org`
 - The `A 1.2.3.4` entry will be deleted and a `CNAME bar.my.org` will be
   created
-  
+
 Now, let's dig into the options
 
 **`"type" = "alias"`**
@@ -448,7 +449,7 @@ The basic idea is the following:
 - You can specify an origin and target environment names
 - There is a *settings generator* Python file which will generate all the
   settings and patches appropriate for this transfer.
-  
+
 It's **your responsibility** to write an settings generator, however there is
 an a documented example attached in this repository.
 
@@ -479,7 +480,7 @@ and especially setting up a professional workflow.
 
 > Why using Python to code it?
 
-It felt to the author that this language was more appropriate for this task 
+It felt to the author that this language was more appropriate for this task
 than PHP.
 
 > Do I need to write Python to use the transfer feature?

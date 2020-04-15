@@ -115,7 +115,7 @@ def main(args: Optional[Sequence[str]] = None):
                 ensure_db_exists(wp_config, mysql_root, remote)
 
         with doing("Restoring DB"):
-            db = create_from_source(wp_config, remote)
+            db = create_from_source(wp_config, remote, args.db_host)
             restore_db(db, dump)
 
         if config["setup_queries"]:

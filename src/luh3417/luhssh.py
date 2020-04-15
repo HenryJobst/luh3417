@@ -64,7 +64,7 @@ class SshManager:
     Use the following way:
 
     >>> try:
-    >>>     manager = SshManager.instance('root', 'server.com')
+    >>>     manager = SshManager.instance('root', 'server.com', 'port')
     >>>     args = manager.get_args(['uptime'])
     >>>     p = Popen(args)
     >>>     p.wait()
@@ -101,7 +101,7 @@ class SshManager:
         Starting the master connection
         """
 
-        doing.logger.debug(f"Connecting SSH to {self.user}@{self.host}")
+        doing.logger.debug(f"Connecting SSH to {self.user}@{self.host}:{self.port}")
 
         self.control_dir = mkdtemp()
 
@@ -131,7 +131,7 @@ class SshManager:
         Cleaning up this particular connection
         """
 
-        doing.logger.debug(f"Tearing down SSH connection to {self.user}@{self.host}")
+        doing.logger.debug(f"Tearing down SSH connection to {self.user}@{self.host}:{self.port}")
 
         if self.process:
             try:

@@ -10,10 +10,10 @@ from typing import Text, Tuple
 from luh3417.luhssh import SshManager
 from luh3417.utils import LuhError
 
-SSH_RE = re.compile(r"^([a-zA-Z0-9_-]+)@((?:[a-zA-Z0-9-]+\.)*(?:[a-zA-Z0-9-]+)):(.*)$")
+SSH_RE = re.compile(r"^([a-zA-Z0-9_-]+)@((?:[a-zA-Z0-9-]+\.)*(?:[a-zA-Z0-9-]+)):(\d*)(.*)$")
 
 
-def parse_location(location: Text) -> "Location":
+def parse_location(location: Text, compression: Text = "gzip") -> "Location":
     """
     Guess the location type and generates the appropriate object
     """
@@ -21,9 +21,24 @@ def parse_location(location: Text) -> "Location":
     sm = SSH_RE.match(location)
 
     if sm:
-        return SshLocation(user=sm.group(1), host=sm.group(2), path=sm.group(3))
+        port = sm.group(3)
+        if port == '':
+            port = None
+        return SshLocation(user=sm.group(1), host=sm.group(2), port=port, path=sm.group(4),
+                           compression_mode=compression)
     else:
-        return LocalLocation(path=location)
+        return LocalLocation(path=location, compression_mode=compression)
+
+
+def get_compression_switch(compression_mode: Text):
+    if compression_mode == "bzip2":
+        return "-j"
+    elif compression_mode == "xz":
+        return "-J"
+    elif compression_mode == "lzip":
+        return "--lzip"
+    else:  # default: gzip
+        return "-z"
 
 
 @dataclass
@@ -40,6 +55,13 @@ class Location:
     def get_content(self) -> Text:
         """
         Calling this returns the whole content of the file
+        """
+
+        raise NotImplementedError
+
+    def set_compression_mode(self, compression_mode: Text):
+        """
+        Set compression mode
         """
 
         raise NotImplementedError
@@ -66,7 +88,7 @@ class Location:
 
         raise NotImplementedError
 
-    def archive_local_dir(self, local_path) -> None:
+    def archive_local_dir(self, local_path, doing) -> None:
         """
         Puts all the content of `local_path` into a TAR/GZ archive at the
         current location.
@@ -170,18 +192,22 @@ class SshLocation(Location):
 
     user: Text
     host: Text
+    port: Text
     path: Text
+    compression_mode: Text
 
     def __str__(self):
-        return f"{self.user}@{self.host}:{self.path}"
+        return f"{self.user}@{self.host}:{self.port}{self.path}"
 
     @property
     def ssh_target(self):
         """
         Generates the target to give to SSH for this location
         """
-
-        return f"{self.user}@{self.host}"
+        port = 22
+        if self.port:
+            port = self.port
+        return f"{self.user}@{self.host}:{port}"
 
     def ssh_run(self, args, *p_args, **kwargs) -> CompletedProcess:
         """
@@ -192,7 +218,7 @@ class SshLocation(Location):
 
         kwargs = dict(kwargs, encoding="utf-8")
 
-        new_args = SshManager.instance(self.user, self.host).get_args(args)
+        new_args = SshManager.instance(self.user, self.host, self.port).get_args(args)
 
         cp = subprocess.run(new_args, *p_args, **kwargs)
 
@@ -209,7 +235,7 @@ class SshLocation(Location):
         that the SSH command will be prepended to the args.
         """
 
-        new_args = SshManager.instance(self.user, self.host).get_args(args)
+        new_args = SshManager.instance(self.user, self.host, self.port).get_args(args)
 
         cp = subprocess.Popen(new_args, *p_args, **kwargs)
 
@@ -239,6 +265,9 @@ class SshLocation(Location):
 
         return cp.stdout
 
+    def set_compression_mode(self, compression_mode: Text):
+        self.compression_mode = compression_mode
+
     def ensure_exists_as_dir(self) -> None:
         """
         Runs mkdir -p remotely
@@ -253,14 +282,18 @@ class SshLocation(Location):
         if cp.returncode:
             raise LuhError(f"Could not create {self} as a directory: {cp.stderr}")
 
-    def archive_local_dir(self, local_path: Text):
+    def archive_local_dir(self, local_path: Text, doing):
         """
         Generates the archive locally and pipe it to a remote dd to write it
         on disk on the other side
         """
 
+        doing.logger.debug("Compression mode: %s", self.compression_mode)
+        compression_switch = get_compression_switch(self.compression_mode)
+        doing.logger.debug("Compression switch: %s", compression_switch)
+
         tar = subprocess.Popen(
-            ["tar", "-C", local_path, "-c", "-z", "."],
+            ["tar", "-C", local_path, "-c", compression_switch, "."],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -285,13 +318,13 @@ class SshLocation(Location):
         Cat the remote file and pipe it into tar
         """
 
-        parse_location(target_dir).ensure_exists_as_dir()
+        parse_location(target_dir, self.compression_mode).ensure_exists_as_dir()
 
         cat = self.ssh_popen(
             ["cat", self.path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         tar = subprocess.Popen(
-            ["tar", "-C", target_dir, "-x", "-z"],
+            ["tar", "-C", target_dir, "-x", get_compression_switch(self.compression_mode)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
             stdin=cat.stdout,
@@ -347,6 +380,7 @@ class LocalLocation(Location):
     """
 
     path: Text
+    compression_mode: Text
 
     def __str__(self):
         return self.path
@@ -362,6 +396,9 @@ class LocalLocation(Location):
         except OSError:
             raise LuhError(f"Unknown error while opening {self}")
 
+    def set_compression_mode(self, compression_mode: Text):
+        self.compression_mode = compression_mode
+
     def ensure_exists_as_dir(self) -> None:
         try:
             Path(self.path).mkdir(parents=True, exist_ok=True)
@@ -372,9 +409,12 @@ class LocalLocation(Location):
         except OSError:
             raise LuhError(f"Unknown error while creating {self}")
 
-    def archive_local_dir(self, local_path):
+    def archive_local_dir(self, local_path, doing):
+        doing.logger.debug("Compression mode: %s", self.compression_mode)
+        compression_switch = get_compression_switch(self.compression_mode)
+        doing.logger.debug("Compression switch: %s", compression_switch)
         cp = subprocess.run(
-            ["tar", "-C", local_path, "-c", "-z", "-f", self.path, "."],
+            ["tar", "-C", local_path, "-c", compression_switch, "-f", self.path, "."],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -387,10 +427,10 @@ class LocalLocation(Location):
         Plain old local archive extraction
         """
 
-        parse_location(target_dir).ensure_exists_as_dir()
+        parse_location(target_dir, self.compression_mode).ensure_exists_as_dir()
 
         tar = subprocess.run(
-            ["tar", "-C", target_dir, "-x", "-z", "-f", self.path],
+            ["tar", "-C", target_dir, "-x", get_compression_switch(self.compression_mode), "-f", self.path],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )

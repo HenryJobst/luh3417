@@ -9,7 +9,7 @@ from luh3417.serialized_replace import ReplaceMap, walk
 from luh3417.utils import LuhError
 
 
-def create_from_source(wp_config, source: Location):
+def create_from_source(wp_config, source: Location, db_host: Text):
     """
     Using a Location object and the WP config, generates the appropriate LuhSql
     object
@@ -18,29 +18,36 @@ def create_from_source(wp_config, source: Location):
     if isinstance(source, SshLocation):
         ssh_user = source.user
         ssh_host = source.host
+        ssh_port = source.port
     elif isinstance(source, LocalLocation):
         ssh_user = None
         ssh_host = None
+        ssh_port = None
     else:
         raise LuhError(f"Unknown source type: {source.__class__.__name__}")
 
+    used_db_host = wp_config["db_host"]
+    if db_host:
+        used_db_host = db_host
+
     return LuhSql(
-        host=wp_config["db_host"],
+        host=used_db_host,
         user=wp_config["db_user"],
         password=wp_config["db_password"],
         db_name=wp_config["db_name"],
         ssh_user=ssh_user,
         ssh_host=ssh_host,
+        ssh_port=ssh_port,
     )
 
 
-def create_root_from_source(wp_config, mysql_root, source: Location) -> "LuhSql":
+def create_root_from_source(wp_config, mysql_root, source: Location, db_host: Text) -> "LuhSql":
     """
     Based on the regular DB accessor, create a root version which will be able
     to run DB manipulation queries
     """
 
-    db = create_from_source(wp_config, source)
+    db = create_from_source(wp_config, source, db_host)
     method = mysql_root.get("method")
     options = mysql_root.get("options", {})
 
@@ -86,6 +93,7 @@ class LuhSql:
     db_name: Text
     ssh_user: Optional[Text]
     ssh_host: Optional[Text]
+    ssh_port: Optional[Text]
     sudo_user: Optional[Text] = None
 
     def ssh_args(self, args: List[Text]) -> List[Text]:
@@ -93,8 +101,8 @@ class LuhSql:
         Appends SSH connection args if required
         """
 
-        if self.ssh_host and self.ssh_user:
-            return SshManager.instance(self.ssh_user, self.ssh_host).get_args(args)
+        if self.ssh_host and self.ssh_user and self.ssh_port:
+            return SshManager.instance(self.ssh_user, self.ssh_host, self.ssh_port).get_args(args)
         else:
             return args
 
