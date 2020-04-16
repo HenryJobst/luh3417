@@ -44,14 +44,48 @@ def _build_args(location: Location, args: Sequence[Text]) -> Sequence[Text]:
         return SshManager.instance(location.user, location.host, location.port).get_args(args)
 
 
-def copy_files(remote: Location, local: Location):
+def activate_maintenance_mode(remote: Location):
+    remote_args = _build_args(remote, ["wp", "maintenance-mode", "activate", "--path=", remote.path, "--quiet"])
+
+    remote_p = subprocess.Popen(
+        remote_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+
+    remote_p.wait()
+
+    if remote_p.returncode:
+        raise LuhError(
+            f'Error while activate maintenance mode at "{remote}": {remote_p.stderr.read(1000)}'
+        )
+
+def deactivate_maintenance_mode(remote: Location):
+    remote_args = _build_args(remote, ["wp", "maintenance-mode", "deactivate", "--path=", remote.path, "--quiet"])
+
+    remote_p = subprocess.Popen(
+        remote_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+
+    remote_p.wait()
+
+    if remote_p.returncode:
+        raise LuhError(
+            f'Error while deactivate maintenance mode at "{remote}": {remote_p.stderr.read(1000)}'
+        )
+
+def copy_files(remote: Location, local: Location, excludes):
     """
     Copies files from the remote location to the local locations. Files are
     serialized and pipelined through tar, maybe locally, maybe through SSH
     depending on the locations.
     """
 
-    remote_args = _build_args(remote, ["tar", "-C", remote.path, "-c", "."])
+    remote_tar_command = ["tar", "-C", remote.path]
+    for exclude in excludes:
+        remote_tar_command.append("--exclude")
+        remote_tar_command.append(exclude)
+    remote_tar_command.extend(["-c", "."])
+
+    remote_args = _build_args(remote, remote_tar_command)
     local_args_1 = _build_args(local, ["mkdir", "-p", local.path])
     local_args_2 = _build_args(local, ["tar", "-C", local.path, "-x"])
 

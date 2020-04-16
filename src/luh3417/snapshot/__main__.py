@@ -9,7 +9,7 @@ import re
 from luh3417.luhfs import Location, parse_location
 from luh3417.luhphp import parse_wp_config
 from luh3417.luhsql import create_from_source
-from luh3417.snapshot import copy_files
+from luh3417.snapshot import copy_files, activate_maintenance_mode, deactivate_maintenance_mode
 from luh3417.utils import make_doer, run_main, setup_logging
 
 doing = make_doer("luh3417.snapshot")
@@ -67,6 +67,16 @@ def parse_args(args: Optional[Sequence[str]] = None) -> Namespace:
         default=None,
         const=None,
         nargs="?",
+    )
+    parser.add_argument(
+        "--maintenance-mode",
+        help=("Activate maintenance mode before copying files to prevent conflicting file changes."),
+        action="store_true",
+    )
+    parser.add_argument(
+        "--exclude",
+        help=("Exclude source files, given as a PATTERN"),
+        action="append",
     )
 
     parsed_args = parser.parse_args(args)
@@ -133,12 +143,22 @@ def main(args: Optional[Sequence[str]] = None):
         with doing("Saving settings"):
             dump_settings(args, wp_config, now, join(d, "settings.json"))
 
-        with doing("Copying database"):
-            db = create_from_source(wp_config, args.source, args.db_host)
-            db.dump_to_file(join(d, "dump.sql"))
+        if args.maintenance_mode == True:
+            with doing("Activate maintenance mode"):
+                activate_maintenance_mode(args.source)
 
-        with doing("Copying files"):
-            copy_files(args.source, work_location.child("wordpress"))
+        try:
+            with doing("Copying database"):
+                db = create_from_source(wp_config, args.source, args.db_host)
+                db.dump_to_file(join(d, "dump.sql"))
+
+            with doing("Copying files"):
+                copy_files(args.source, work_location.child("wordpress"), args.exclude)
+
+        finally:
+            if args.maintenance_mode == True:
+                with doing("Deactivate maintenance mode"):
+                    deactivate_maintenance_mode(args.source)
 
         with doing("Writing archive"):
             args.backup_dir.ensure_exists_as_dir()
