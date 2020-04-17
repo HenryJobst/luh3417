@@ -70,12 +70,23 @@ def parse_args(args: Optional[Sequence[str]] = None) -> Namespace:
     )
     parser.add_argument(
         "--maintenance-mode",
-        help=("Activate maintenance mode before copying files to prevent conflicting file changes."),
+        help=(
+            "Activate maintenance mode before copying files to prevent conflicting file changes."
+        ),
         action="store_true",
     )
     parser.add_argument(
         "--exclude",
-        help=("Exclude source files, given as a PATTERN"),
+        help=(
+            "Exclude source files/directories, given as PATTERN. See tar command manual page."
+        ),
+        action="append",
+    )
+    parser.add_argument(
+        "--exclude-tag-all",
+        help=(
+            "Exclude source directories and all its content, where FILE is inside. See tar command manual page."
+        ),
         action="append",
     )
 
@@ -143,7 +154,7 @@ def main(args: Optional[Sequence[str]] = None):
         with doing("Saving settings"):
             dump_settings(args, wp_config, now, join(d, "settings.json"))
 
-        if args.maintenance_mode == True:
+        if args.maintenance_mode is True:
             with doing("Activate maintenance mode"):
                 activate_maintenance_mode(args.source)
 
@@ -153,10 +164,10 @@ def main(args: Optional[Sequence[str]] = None):
                 db.dump_to_file(join(d, "dump.sql"))
 
             with doing("Copying files"):
-                copy_files(args.source, work_location.child("wordpress"), args.exclude)
+                copy_files(args.source, work_location.child("wordpress"), args.exclude, args.exclude_tag_all)
 
         finally:
-            if args.maintenance_mode == True:
+            if args.maintenance_mode is True:
                 with doing("Deactivate maintenance mode"):
                     deactivate_maintenance_mode(args.source)
 
