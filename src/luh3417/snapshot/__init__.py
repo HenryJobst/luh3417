@@ -58,6 +58,7 @@ def activate_maintenance_mode(remote: Location):
             f'Error while activate maintenance mode at "{remote}": {remote_p.stderr.read(1000)}'
         )
 
+
 def deactivate_maintenance_mode(remote: Location):
     remote_args = _build_args(remote, ["wp", "maintenance-mode", "deactivate", "--path=", remote.path, "--quiet"])
 
@@ -72,7 +73,8 @@ def deactivate_maintenance_mode(remote: Location):
             f'Error while deactivate maintenance mode at "{remote}": {remote_p.stderr.read(1000)}'
         )
 
-def copy_files(remote: Location, local: Location, excludes):
+
+def copy_files(remote: Location, local: Location, excludes, exclude_tag_alls):
     """
     Copies files from the remote location to the local locations. Files are
     serialized and pipelined through tar, maybe locally, maybe through SSH
@@ -80,9 +82,14 @@ def copy_files(remote: Location, local: Location, excludes):
     """
 
     remote_tar_command = ["tar", "-C", remote.path]
-    for exclude in excludes:
-        remote_tar_command.append("--exclude")
-        remote_tar_command.append(exclude)
+    if excludes:
+        for exclude in excludes:
+            remote_tar_command.append("--exclude")
+            remote_tar_command.append(exclude)
+    if exclude_tag_alls:
+        for exclude_tag_all in exclude_tag_alls:
+            remote_tar_command.append("--exclude-tag-all")
+            remote_tar_command.append(exclude_tag_all)
     remote_tar_command.extend(["-c", "."])
 
     remote_args = _build_args(remote, remote_tar_command)
