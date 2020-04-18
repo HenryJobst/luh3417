@@ -324,7 +324,7 @@ class SshLocation(Location):
             ["cat", self.path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         tar = subprocess.Popen(
-            ["tar", "-C", target_dir, "-x", get_compression_switch(self.compression_mode)],
+            ["tar", "-C", target_dir, "-x", "-a"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
             stdin=cat.stdout,
@@ -430,7 +430,7 @@ class LocalLocation(Location):
         parse_location(target_dir, self.compression_mode).ensure_exists_as_dir()
 
         tar = subprocess.run(
-            ["tar", "-C", target_dir, "-x", get_compression_switch(self.compression_mode), "-f", self.path],
+            ["tar", "-C", target_dir, "-x", "-a", "-f", self.path],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )
