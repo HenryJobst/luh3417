@@ -51,6 +51,16 @@ def parse_args(args: Optional[Sequence[str]] = None) -> Namespace:
         type=parse_location,
     )
 
+    parser.add_argument(
+        "--db-host",
+        help=(
+            "Optional IP address of the database server, if IP of the wpconfig.php is a local one."
+        ),
+        default=None,
+        const=None,
+        nargs="?",
+    )
+
     return parser.parse_args(args)
 
 

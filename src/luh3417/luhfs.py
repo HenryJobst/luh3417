@@ -80,6 +80,13 @@ class Location:
         if ret:
             raise LuhError(f"Cannot set content: {err}")
 
+    def delete_dir_content(self) -> None:
+        """
+        Delete content of the location.
+        """
+
+        raise NotImplementedError
+
     def ensure_exists_as_dir(self) -> None:
         """
         This ensures that the location is a directory and exists (as well as
@@ -268,6 +275,20 @@ class SshLocation(Location):
     def set_compression_mode(self, compression_mode: Text):
         self.compression_mode = compression_mode
 
+    def delete_dir_content(self) -> None:
+        """
+        Runs rm -rf remotely
+        """
+
+        cp = self.ssh_run(
+            ["rm", "-rf", self.path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        if cp.returncode:
+            raise LuhError(f"Could not delete content of {self}: {cp.stderr}")
+
     def ensure_exists_as_dir(self) -> None:
         """
         Runs mkdir -p remotely
@@ -398,6 +419,17 @@ class LocalLocation(Location):
 
     def set_compression_mode(self, compression_mode: Text):
         self.compression_mode = compression_mode
+
+    def delete_dir_content(self) -> None:
+
+        cp = subprocess.run(
+            ["rm", "-rf", self.path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+
+        if cp.returncode:
+            raise LuhError(f"Could not delete content of {self}: {cp.stderr}")
 
     def ensure_exists_as_dir(self) -> None:
         try:
