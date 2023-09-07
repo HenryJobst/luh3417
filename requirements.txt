@@ -5,7 +5,7 @@
 #    __main__.py compile requirements.in
 #
 apache-libcloud==2.4.0
-certifi==2019.3.9         # via requests
+certifi==2023.7.22         # via requests
 chardet==3.0.4            # via requests
 coloredlogs==10.0
 humanfriendly==4.17       # via coloredlogs
