@@ -10,5 +10,5 @@ chardet==3.0.4            # via requests
 coloredlogs==10.0
 humanfriendly==4.17       # via coloredlogs
 idna==2.8                 # via requests
-requests==2.21.0          # via apache-libcloud
+requests==2.31.0          # via apache-libcloud
 urllib3==1.26.5           # via requests
